@@ -1,9 +1,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Modal } from 'react-native';
-import { styles } from './ClientModal.styles';
-import { globalStyles } from '../../styles/globalStyles';
+import { globalStyles } from '../../constants/GlobalStyles';
 
-const ClientModal = ({ visible, client, onClose, onEdit, onViewHistory, onGenerateReport }) => {
+const ClientModal = ({ visible, client, onClose, onEdit, onViewHistory, onGenerateReport }) => { // componente modal para la información detallada de un cliente
   if (!client) return null;
 
   return (
@@ -40,9 +39,9 @@ const ClientModal = ({ visible, client, onClose, onEdit, onViewHistory, onGenera
 export default ClientModal;
 
 import { StyleSheet } from 'react-native';
-import { colors } from '../../styles/colors';
+import { colors } from '../../constants/Colors';
 
-export const styles = StyleSheet.create({
+const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: colors.modalBackground,
