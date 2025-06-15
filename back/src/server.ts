@@ -1,30 +1,33 @@
-// src/server.ts
-import express from 'express';
+import express, { Express } from 'express';
 import cors from 'cors';
+import mongoose from 'mongoose';
 import dotenv from 'dotenv';
-import { conectarDB } from './config/db';
-import usuarioRoutes from './routes/usuario.routes';
+import authRoutes from './routes/auth.routes';
+import clienteRoutes from './routes/cliente.routes';
+import asesorRoutes from './routes/asesor.routes';
 
-// Cargar variables de entorno
-dotenv.config();
+dotenv.config(); // para usar variables del archivo .env
 
-// Crear app Express
-const app = express();
+const app: Express = express();
+const PORT = process.env.PORT || 3000;
 
 // Middlewares
 app.use(cors());
-app.use(express.json());
-
-// Conexión a base de datos
-conectarDB();
+app.use(express.json()); // para leer JSON en el body
 
 // Rutas
-app.use('/api', usuarioRoutes);
+app.use('/api/clientes', clienteRoutes);
+app.use('/api/asesores', asesorRoutes);
 
-// Puerto desde env o por defecto
-const PORT = Number(process.env.PORT) || 3000;
+app.use('/api/auth', authRoutes);
 
-// Escuchar en todas las IPs disponibles (accesible desde celulares)
-app.listen(PORT, '0.0.0.0', () => {
+// Conexión a MongoDB
+mongoose.connect(process.env.MONGO_URL || '', {
+})
+  .then(() => console.log('🟢 MongoDB conectado'))
+  .catch(err => console.error('❌ Error al conectar MongoDB', err));
+
+// Iniciar servidor
+app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
 });

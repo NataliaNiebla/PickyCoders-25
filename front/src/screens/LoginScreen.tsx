@@ -1,84 +1,23 @@
-// src/screens/LoginScreen.tsx
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { CommonActions, useNavigation } from '@react-navigation/native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  ActivityIndicator
+} from 'react-native';
 import { login } from '../api/auth';
-import { useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-const LoginScreen = () => {
-  const [email, setEmail] = useState('');
-  const [contraseña, setContraseña] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [currentTime, setCurrentTime] = useState('');
-
-  const navigation = useNavigation();
-
-  useEffect(() => {
-    const updateTime = () => {
-      const now = new Date();
-      const hours = now.getHours().toString().padStart(2, '0');
-      const minutes = now.getMinutes().toString().padStart(2, '0');
-      setCurrentTime(`${hours}:${minutes}`);
-    };
-    updateTime();
-    const interval = setInterval(updateTime, 60000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const handleLogin = async () => {
-    if (!email || !contraseña) {
-      Alert.alert('Error', 'Por favor ingresa tu correo y contraseña');
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const data = await login(email, contraseña);
-      Alert.alert('Éxito', `Bienvenido ${data.usuario.nombre}`);
-      // navigation.navigate('Home'); // Puedes activar esto cuando tengas la pantalla Home
-    } catch (err: any) {
-      Alert.alert('Error', err.message || 'No se pudo iniciar sesión');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  return (
-    <View style={styles.container}>
-      <Text style={styles.time}>{currentTime}</Text>
-      <Text style={styles.title}>¡Bienvenido!</Text>
-      <Text style={styles.subtitle}>Inicia sesión para continuar</Text>
-
-      <TextInput
-        style={styles.input}
-        placeholder="Correo electrónico"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        autoCapitalize="none"
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Contraseña"
-        value={contraseña}
-        secureTextEntry={!showPassword}
-        onChangeText={setContraseña}
-      />
-
-      <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-        <Text style={styles.togglePassword}>
-          {showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-        </Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={isLoading}>
-        {isLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Iniciar sesión</Text>}
-      </TouchableOpacity>
-    </View>
-  );
+type RootStackParamList = {
+  Login: undefined;
+  Home: undefined;
+  // ClienteDashboard: undefined; ← aún no la tienes
 };
-
-export default LoginScreen;
 
 const styles = StyleSheet.create({
   container: {
@@ -129,3 +68,102 @@ const styles = StyleSheet.create({
     fontWeight: 'bold'
   }
 });
+
+const LoginScreen = () => {
+  const [email, setEmail] = useState('');
+  const [contraseña, setContraseña] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [currentTime, setCurrentTime] = useState('');
+
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      const hours = now.getHours().toString().padStart(2, '0');
+      const minutes = now.getMinutes().toString().padStart(2, '0');
+      setCurrentTime(`${hours}:${minutes}`);
+    };
+    updateTime();
+    const interval = setInterval(updateTime, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+const handleLogin = async () => {
+  if (!email || !contraseña) {
+    Alert.alert('Error', 'Por favor ingresa tu correo y contraseña');
+    return;
+  }
+
+  setIsLoading(true);
+  try {
+    const data = await login(email, contraseña);
+
+    await AsyncStorage.setItem('token', data.token);
+    await AsyncStorage.setItem('rol', data.rol);
+    await AsyncStorage.setItem('usuario', JSON.stringify(data.usuario));
+
+    Alert.alert('Éxito', `Bienvenido ${data.usuario.nombre}`);
+
+    // ✅ Navegación corregida:
+    if (data.rol === 'asesor') {
+      navigation.dispatch(
+        CommonActions.reset({
+          index: 0,
+          routes: [{ name: 'Home' }]
+        })
+      );
+    } else {
+      navigation.dispatch(
+        CommonActions.reset({
+          index: 0,
+          routes: [{ name: 'ClienteDashboard' }]
+        })
+      );
+    }
+  } catch (error: any) {
+    Alert.alert('Error', error.message || 'Ocurrió un error al iniciar sesión');
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+return (
+  <View style={styles.container}>
+    <Text style={styles.time}>{currentTime}</Text>
+    <Text style={styles.title}>Iniciar Sesión</Text>
+    <Text style={styles.subtitle}>Ingresa tus credenciales para continuar</Text>
+    <TextInput
+      style={styles.input}
+      placeholder="Correo electrónico"
+      value={email}
+      onChangeText={setEmail}
+      autoCapitalize="none"
+      keyboardType="email-address"
+    />
+    <TextInput
+      style={styles.input}
+      placeholder="Contraseña"
+      value={contraseña}
+      onChangeText={setContraseña}
+      secureTextEntry={!showPassword}
+    />
+    <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+      <Text style={styles.togglePassword}>
+        {showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+      </Text>
+    </TouchableOpacity>
+    <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={isLoading}>
+      {isLoading ? (
+        <ActivityIndicator color="#fff" />
+      ) : (
+        <Text style={styles.buttonText}>Ingresar</Text>
+      )}
+    </TouchableOpacity>
+  </View>
+);
+
+};
+
+export default LoginScreen;

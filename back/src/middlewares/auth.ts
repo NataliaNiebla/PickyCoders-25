@@ -1,43 +1,18 @@
-import { Request, Response, NextFunction } from 'express';
+// src/middlewares/auth.ts
 import jwt from 'jsonwebtoken';
 
-interface JwtPayload {
-  id: string;
-  rol: 'admin' | 'usuario';
-  zona?: any;
-}
+const SECRET = process.env.JWT_SECRET || 'secreto123';
 
-declare global {
-  namespace Express {
-    interface Request {
-      usuario: JwtPayload;
-    }
-  }
-}
-
-export const auth = (req: Request, res: Response, next: NextFunction) => {
+export const verificarToken = (req: { headers: { authorization: string; }; user: string | jwt.JwtPayload; }, res: { status: (arg0: number) => { (): any; new(): any; json: { (arg0: { error: string; }): void; new(): any; }; }; }, next: () => void) => {
   const token = req.headers.authorization?.split(' ')[1];
-  if (!token) return res.status(401).json({ mensaje: 'Token requerido' });
+
+  if (!token) return res.status(403).json({ error: 'Token requerido' });
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secreto') as JwtPayload;
-    req.usuario = decoded;
+    const decoded = jwt.verify(token, SECRET);
+    req.user = decoded; // ← aquí tenemos el `id` del asesor
     next();
-  } catch {
-    res.status(403).json({ mensaje: 'Token inválido' });
+  } catch (err) {
+    res.status(401).json({ error: 'Token inválido' });
   }
-};
-
-export const soloAdmin = (req: Request, res: Response, next: NextFunction) => {
-  if (req.usuario.rol !== 'admin') {
-    return res.status(403).json({ mensaje: 'Solo accesible por administradores' });
-  }
-  next();
-};
-
-export const soloUsuario = (req: Request, res: Response, next: NextFunction) => {
-  if (req.usuario.rol !== 'usuario') {
-    return res.status(403).json({ mensaje: 'Solo accesible por usuarios asesores' });
-  }
-  next();
 };
